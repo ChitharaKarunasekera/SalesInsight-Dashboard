@@ -1,0 +1,8 @@
+{% extends "base.html" %} {% block title %}Heatmap{% endblock %}
+
+{% block content %}
+<h1>Sales Heatmap</h1>
+<div>
+    {{ graph_html|safe }}
+</div>
+{% endblock %}
