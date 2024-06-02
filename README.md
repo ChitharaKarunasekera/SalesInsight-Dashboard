@@ -33,4 +33,6 @@ This project aims to provide a comprehensive analysis of a company's sales data 
 5. ### Average Order Value Chart
   ![aov_chart](https://github.com/ChitharaKarunasekera/SalesInsight-Dashboard/assets/78892816/ab98e7cd-399f-4eee-bbbd-b9974f58481d)
 
-  
+6. ### RFM Analysis Chart
+  ![rfm_analysis](https://github.com/ChitharaKarunasekera/SalesInsight-Dashboard/assets/78892816/ebf6b420-0f29-40f2-8f36-0e98f24f97a7)
+
