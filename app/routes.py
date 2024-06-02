@@ -18,7 +18,7 @@ from analytics import (
 )
 
 
-@app.route('/hello_world')
+@app.route('/')
 def hello_world():
     return render_template('index.html')
 
