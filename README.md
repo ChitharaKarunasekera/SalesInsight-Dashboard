@@ -28,7 +28,7 @@ This project aims to provide a comprehensive analysis of a company's sales data 
   ![top_selling](https://github.com/ChitharaKarunasekera/SalesInsight-Dashboard/assets/78892816/e1d74ce9-3fca-4a94-8616-70c8265ef75a)
 
 4. ### Customer Retention Chart
-  ![customer_retention](https://github.com/ChitharaKarunasekera/SalesInsight-Dashboard/assets/78892816/cddc3114-c58f-4abb-a846-8f3e5948ded2)
+  <img src="https://github.com/ChitharaKarunasekera/SalesInsight-Dashboard/assets/78892816/cddc3114-c58f-4abb-a846-8f3e5948ded2" alt="Customer Retention" width="500">
   
 5. ### Average Order Value Chart
   ![aov_chart](https://github.com/ChitharaKarunasekera/SalesInsight-Dashboard/assets/78892816/ab98e7cd-399f-4eee-bbbd-b9974f58481d)
