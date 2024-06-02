@@ -334,6 +334,7 @@ def generate_sales_by_category_chart(df):
 
 # $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
 def generate_rfm_analysis_chart(df):
+    # Calculate RFM metrics
     df['Recency'] = (df['InvoiceDate'].max() - df['InvoiceDate']).dt.days
     rfm = df.groupby('CustomerID').agg({
         'Recency': 'min',
@@ -342,8 +343,33 @@ def generate_rfm_analysis_chart(df):
     }).reset_index()
     rfm.columns = ['CustomerID', 'Recency', 'Frequency', 'Monetary']
 
-    fig = px.scatter(rfm, x='Recency', y='Monetary', size='Frequency', color='Monetary', title='RFM Analysis')
-    fig.update_layout(template='plotly_white')
+    # Create the scatter plot
+    fig = px.scatter(
+        rfm,
+        x='Recency',
+        y='Monetary',
+        size='Frequency',
+        color='Monetary',
+        title='RFM Analysis Chart',
+        labels={'Recency': 'Recency (days)', 'Monetary': 'Monetary (total spent)', 'Frequency': 'Frequency (number of purchases)'},
+        color_continuous_scale='Turbo',  # Change to a distinct color palette
+        hover_data={'CustomerID': True, 'Recency': True, 'Frequency': True, 'Monetary': True}
+    )
+
+    fig.update_layout(
+        template='plotly_white',
+        xaxis_title='Recency (days)',
+        yaxis_title='Monetary (total spent)',
+        legend_title_text='Monetary',
+        title={
+            'text': 'RFM Analysis Chart',
+            'x': 0.5,
+            'xanchor': 'center'
+        }
+    )
+
+    # Improve the scaling of the bubble sizes
+    fig.update_traces(marker=dict(sizeref=2.*max(rfm['Frequency'])/(40.**2), sizemode='area'))
 
     return fig.to_html(full_html=False)
 
