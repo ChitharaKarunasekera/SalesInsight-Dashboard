@@ -9,18 +9,18 @@ from analytics import (
     generate_customer_retention_chart,
     generate_aov_chart,
     generate_top_customers_chart,
-    generate_sales_growth_chart,
     generate_customer_acquisition_retention_chart,
     generate_sales_by_hour_chart,
     generate_sales_heatmap,
     generate_sales_by_category_chart,
-    generate_customer_segmentation_chart
+    generate_rfm_analysis_chart,
+    generate_cohort_analysis_chart
 )
 
 
-@app.route('/')
+@app.route('/hello_world')
 def hello_world():
-    return render_template('index.html')
+    return 'Hello, World!'
 
 
 @app.route('/dashboard')
@@ -60,7 +60,6 @@ def dashboard():
 
 @app.route('/heatmap')
 def heatmap_page():
-    print("Current Working Directory:", os.getcwd())
 
     base_dir = os.path.abspath(os.path.dirname(__file__))
     data_file = os.path.join(base_dir, 'data/online_retail.csv')
@@ -77,9 +76,8 @@ def heatmap_page():
         graph_html=graph_html
     )
 
-@app.route('/customer_segmentation')
+@app.route('/rfm_analysis')
 def customer_segmentation():
-    print("Current Working Directory:", os.getcwd())
 
     base_dir = os.path.abspath(os.path.dirname(__file__))
     data_file = os.path.join(base_dir, 'data/online_retail.csv')
@@ -89,9 +87,9 @@ def customer_segmentation():
     if error:
         return error, 404
 
-    graph_html = generate_customer_segmentation_chart(df)
+    graph_html = generate_rfm_analysis_chart(df)
 
     return render_template(
-        'customer_segmentation.html',
+        'rfm_analysis.html',
         graph_html=graph_html
     )

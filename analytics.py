@@ -51,22 +51,65 @@ def generate_monthly_sales_chart(df):
 
 
 def generate_sales_by_country_chart(df):
+    # Group by Country and sum the TotalPrice
     sales_by_country = df.groupby('Country')['TotalPrice'].sum().sort_values(ascending=False)
-    uk_sales = sales_by_country.loc['United Kingdom']
-    sales_by_country = sales_by_country.drop('United Kingdom').head(10)
 
+    # Check if 'United Kingdom' is in the data
+    if 'United Kingdom' in sales_by_country.index:
+        uk_sales = sales_by_country.loc['United Kingdom']
+        sales_by_country = sales_by_country.drop('United Kingdom')
+    else:
+        uk_sales = None
+
+    # Take the top 10 countries excluding UK
+    top_countries = sales_by_country.head(10)
+
+    # Create the bar chart
     fig = px.bar(
-        sales_by_country,
-        x=sales_by_country.index,
+        top_countries,
+        x=top_countries.index,
         y='TotalPrice',
-        title='Sales by Country (excluding UK)',
-        color=sales_by_country.index
+        title='Sales by Country (excluding UK)' if uk_sales else 'Sales by Country',
+        color=top_countries.index,
+        color_discrete_sequence=px.colors.qualitative.Bold
     )
 
     fig.update_layout(
         xaxis_title='Country',
         yaxis_title='Total Sales',
-        xaxis_tickangle=-45
+        xaxis_tickangle=-45,
+        template='plotly_white',
+        hovermode='x unified'
+    )
+
+    # Add dropdown menu for dynamic country selection
+    fig.update_layout(
+        updatemenus=[
+            {
+                'buttons': [
+                    {
+                        'label': 'Top 5 Countries',
+                        'method': 'update',
+                        'args': [{'y': [sales_by_country.head(5).values], 'x': [sales_by_country.head(5).index]},
+                                 {'title': 'Top 5 Countries', 'coloraxis': {'colorscale': 'Viridis'}}]
+                    },
+                    {
+                        'label': 'Top 10 Countries',
+                        'method': 'update',
+                        'args': [{'y': [sales_by_country.head(10).values], 'x': [sales_by_country.head(10).index]},
+                                 {'title': 'Top 10 Countries', 'coloraxis': {'colorscale': 'Viridis'}}]
+                    },
+                    {
+                        'label': 'Top 15 Countries',
+                        'method': 'update',
+                        'args': [{'y': [sales_by_country.head(15).values], 'x': [sales_by_country.head(15).index]},
+                                 {'title': 'Top 15 Countries', 'coloraxis': {'colorscale': 'Viridis'}}]
+                    }
+                ],
+                'direction': 'down',
+                'showactive': True,
+            }
+        ]
     )
 
     return fig.to_html(full_html=False), uk_sales
@@ -80,37 +123,113 @@ def generate_top_products_chart(df):
         x=top_products.values,
         y=top_products.index,
         orientation='h',
-        title='Top 10 Products by Sales'
+        title='Top 10 Products by Sales',
+        labels={'x': 'Total Sales', 'y': 'Product'},
+        color=top_products.values,
+        color_continuous_scale='Viridis'
     )
+
+    fig.update_layout(
+        xaxis_title='Total Sales',
+        yaxis_title='Product',
+        template='plotly_white',
+        hovermode='y unified',
+        coloraxis_showscale=False
+    )
+
+    fig.update_traces(
+        marker_line_color='black',
+        marker_line_width=1.5,
+        opacity=0.8
+    )
+
 
     return fig.to_html(full_html=False)
 
-
 def generate_customer_retention_chart(df):
+    # Filter repeat customers
     repeat_customers = df.groupby('CustomerID').filter(lambda x: len(x) > 1)
+    # Calculate retention rate
     retention_rate = len(repeat_customers['CustomerID'].unique()) / len(df['CustomerID'].unique()) * 100
 
     fig = go.Figure(go.Indicator(
-        mode="gauge+number",
+        mode="gauge+number+delta",
         value=retention_rate,
         title={'text': "Customer Retention Rate (%)"},
-        gauge={'axis': {'range': [None, 100]}}
+        delta={'reference': 50, 'increasing': {'color': '#FFC96F'}, 'decreasing': {'color': '#FF8080'}},
+        gauge={
+            'axis': {'range': [None, 100]},
+            'bar': {'color': "#7286D3"},
+            'steps': [
+                {'range': [0, 25], 'color': "#FF8080"},
+                {'range': [25, 50], 'color': "#FFCF81"},
+                {'range': [50, 75], 'color': "#FFC96F"},
+                {'range': [75, 100], 'color': "#BFF6C3"}
+            ],
+            'threshold': {
+                'line': {'color': "black", 'width': 4},
+                'thickness': 0.75,
+                'value': 50
+            }
+        }
     ))
 
     return fig.to_html(full_html=False)
 
 
+
 def generate_aov_chart(df):
     aov = df.groupby(df['InvoiceDate'].dt.to_period('M'))['TotalPrice'].mean()
+    aov.index = aov.index.to_timestamp()  # Convert PeriodIndex to Timestamp for Plotly compatibility
 
     fig = px.line(
         aov,
-        x=aov.index.astype(str),
+        x=aov.index,
         y='TotalPrice',
-        title='Average Order Value (AOV) Over Time'
+        title='Average Order Value (AOV) Over Time',
+        labels={'TotalPrice': 'Average Order Value', 'index': 'Date'},
+        markers=True
+    )
+
+    # Add trendline using rolling mean
+    rolling_mean = aov.rolling(window=3).mean()
+    fig.add_trace(go.Scatter(
+        x=rolling_mean.index,
+        y=rolling_mean,
+        mode='lines',
+        name='3-Month Rolling Average',
+        line=dict(dash='dash', color='firebrick')
+    ))
+
+    # Customize layout
+    fig.update_layout(
+        xaxis_title='Date',
+        yaxis_title='Average Order Value',
+        hovermode='x unified',
+        template='plotly_white',
+        legend=dict(
+            x=0.01,
+            y=0.99,
+            bgcolor='rgba(255, 255, 255, 0)',
+            bordercolor='rgba(255, 255, 255, 0)'
+        ),
+        annotations=[
+            dict(
+                x=aov.index[0],
+                y=aov.max(),
+                xref="x",
+                yref="y",
+                text="Highest AOV",
+                showarrow=True,
+                arrowhead=7,
+                ax=0,
+                ay=-40
+            )
+        ]
     )
 
     return fig.to_html(full_html=False)
+
 
 
 def generate_top_customers_chart(df):
@@ -122,29 +241,6 @@ def generate_top_customers_chart(df):
         y=top_customers.index,
         orientation='h',
         title='Top 10 Customers by Sales'
-    )
-
-    return fig.to_html(full_html=False)
-
-# #####################################################################################################
-def generate_sales_growth_chart(df):
-    monthly_sales = df.set_index('InvoiceDate').resample('M')['TotalPrice'].sum()
-    monthly_growth = monthly_sales.pct_change().dropna() * 100
-
-    fig = px.line(
-        monthly_growth,
-        x=monthly_growth.index,
-        y='TotalPrice',
-        title='Monthly Sales Growth Rate',
-        labels={'TotalPrice': 'Growth Rate (%)', 'InvoiceDate': 'Date'},
-        markers=True
-    )
-
-    fig.update_layout(
-        xaxis_title='Date',
-        yaxis_title='Growth Rate (%)',
-        hovermode='x unified',
-        template='plotly_white'
     )
 
     return fig.to_html(full_html=False)
@@ -196,14 +292,58 @@ def generate_sales_by_hour_chart(df):
         x=sales_by_hour.index,
         y='TotalPrice',
         title='Sales Distribution by Hour',
-        labels={'TotalPrice': 'Total Sales', 'Hour': 'Hour of Day'}
+        labels={'TotalPrice': 'Total Sales', 'Hour': 'Hour of Day'},
+        color=sales_by_hour.index,
+        color_continuous_scale=px.colors.sequential.Cividis  # Changed color palette to Cividis
     )
 
     fig.update_layout(
         xaxis_title='Hour of Day',
         yaxis_title='Total Sales',
+        template='plotly_white',
+        coloraxis_showscale=False
+    )
+
+    return fig.to_html(full_html=False)
+
+
+
+
+
+def generate_sales_by_category_chart(df):
+    # Example categorization by first word in description; you might have better category data
+    df['ProductCategory'] = df['Description'].apply(lambda x: x.split()[0] if pd.notnull(x) else 'Unknown')
+    sales_by_category = df.groupby('ProductCategory')['TotalPrice'].sum().sort_values(ascending=False).head(10)
+
+    fig = px.bar(
+        sales_by_category,
+        x=sales_by_category.index,
+        y='TotalPrice',
+        title='Sales by Product Category',
+        labels={'TotalPrice': 'Total Sales', 'ProductCategory': 'Category'}
+    )
+
+    fig.update_layout(
+        xaxis_title='Product Category',
+        yaxis_title='Total Sales',
         template='plotly_white'
     )
+
+    return fig.to_html(full_html=False)
+
+
+# $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+def generate_rfm_analysis_chart(df):
+    df['Recency'] = (df['InvoiceDate'].max() - df['InvoiceDate']).dt.days
+    rfm = df.groupby('CustomerID').agg({
+        'Recency': 'min',
+        'InvoiceNo': 'count',
+        'TotalPrice': 'sum'
+    }).reset_index()
+    rfm.columns = ['CustomerID', 'Recency', 'Frequency', 'Monetary']
+
+    fig = px.scatter(rfm, x='Recency', y='Monetary', size='Frequency', color='Monetary', title='RFM Analysis')
+    fig.update_layout(template='plotly_white')
 
     return fig.to_html(full_html=False)
 
@@ -241,50 +381,18 @@ def generate_sales_heatmap(df):
     return fig.to_html(full_html=False)
 
 
-def generate_sales_by_category_chart(df):
-    # Example categorization by first word in description; you might have better category data
-    df['ProductCategory'] = df['Description'].apply(lambda x: x.split()[0] if pd.notnull(x) else 'Unknown')
-    sales_by_category = df.groupby('ProductCategory')['TotalPrice'].sum().sort_values(ascending=False).head(10)
+def generate_cohort_analysis_chart(df):
+    df['OrderPeriod'] = df['InvoiceDate'].dt.to_period('M')
+    df['CohortGroup'] = df.groupby('CustomerID')['InvoiceDate'].transform('min').dt.to_period('M')
 
-    fig = px.bar(
-        sales_by_category,
-        x=sales_by_category.index,
-        y='TotalPrice',
-        title='Sales by Product Category',
-        labels={'TotalPrice': 'Total Sales', 'ProductCategory': 'Category'}
-    )
-
-    fig.update_layout(
-        xaxis_title='Product Category',
-        yaxis_title='Total Sales',
-        template='plotly_white'
-    )
-
-    return fig.to_html(full_html=False)
-
-
-# $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
-def generate_customer_segmentation_chart(df):
-    from sklearn.cluster import KMeans
-    from sklearn.preprocessing import StandardScaler
-
-    # Prepare data for clustering
-    customer_data = df.groupby('CustomerID').agg({
-        'TotalPrice': 'sum',
-        'InvoiceNo': 'count',
-        'InvoiceDate': lambda x: (df['InvoiceDate'].max() - x.max()).days
+    cohort_data = df.groupby(['CohortGroup', 'OrderPeriod']).agg({
+        'CustomerID': 'nunique'
     }).reset_index()
-    customer_data.columns = ['CustomerID', 'TotalSpent', 'Frequency', 'Recency']
+    cohort_data['CohortPeriod'] = (cohort_data['OrderPeriod'] - cohort_data['CohortGroup']).apply(attrgetter('n'))
 
-    # Standardize data
-    scaler = StandardScaler()
-    scaled_data = scaler.fit_transform(customer_data[['TotalSpent', 'Frequency', 'Recency']])
+    cohort_pivot = cohort_data.pivot_table(index='CohortGroup', columns='CohortPeriod', values='CustomerID')
 
-    # K-means clustering
-    kmeans = KMeans(n_clusters=4, random_state=42)
-    customer_data['Cluster'] = kmeans.fit_predict(scaled_data)
-
-    fig = px.scatter_3d(customer_data, x='Recency', y='Frequency', z='TotalSpent', color='Cluster', title='Customer Segmentation')
-    fig.update_layout(template='plotly_white')
+    fig = px.imshow(cohort_pivot, aspect='auto', color_continuous_scale='Viridis', title='Cohort Analysis')
+    fig.update_layout(xaxis_title='Cohort Period', yaxis_title='Cohort Group', template='plotly_white')
 
     return fig.to_html(full_html=False)
